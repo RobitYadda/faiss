@@ -542,7 +542,7 @@ GpuIndexFlat::update (idx_t key,const float * new_f) const {
 //        if (use_int8_norms)
         {
             DeviceTensor<float, 1, true> updateNorms({(int) 1});
-            runL2Norm(devData, updateNorms, true, 1, resources_);
+            runL2Norm(devData, updateNorms, true, 1, resources_, stream);
             auto norms = data_->getNormsInt8Ref()[key];
             toDevice(norms.data(), updateNorms.data(), 1, stream);
         }

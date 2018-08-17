@@ -32,7 +32,7 @@ void runL2Norm(Tensor<half, 2, true>& input,
                bool normSquared,
                cudaStream_t stream);
 
-void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bool normSquard, int numVecs, GpuResources * const resources);
+void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bool normSquard, int numVecs, GpuResources * const resources, cudaStream_t stream);
 
 #endif
 

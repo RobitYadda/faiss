@@ -280,15 +280,19 @@ struct ReciprocalAndSquareRoot
     void operator()(float &f){f = sqrt(1 / f);}
 };
 
-void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bool normSquard, int numVecs, GpuResources * resources)
+void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bool normSquard, int numVecs, GpuResources * resources, cudaStream_t stream)
 {
 
     auto handle = resources->getBlasHandleCurrentDevice();
+    cudaStream_t stream_id;
+    cublasGetStream(handle, &stream_id);
+    cublasSetStream(handle, stream);
     int dim = input.getSize(1);
     float alpha = 256.0f;
 
+//    cudaDeviceSynchronize();
     DeviceTensor<float, 2, true> device_buffer({numVecs, dim});
-    device_buffer.zero(resources->getDefaultStreamCurrentDevice());
+    device_buffer.zero(stream);
 
     cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
     auto ret = cublasSaxpy(handle, numVecs * dim,
@@ -296,7 +300,9 @@ void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bo
                            input.end() - numVecs * dim, 1,
                            device_buffer.data(), 1);
     FAISS_ASSERT(ret == CUBLAS_STATUS_SUCCESS);
-    thrust::for_each(thrust::device, device_buffer.data(), device_buffer.end(), Floor());
+//    cudaStreamSynchronize(stream);
+    thrust::for_each(thrust::cuda::par.on(stream), device_buffer.data(), device_buffer.end(), Floor());
+
 
     cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_DEVICE);
     for (int i = 0; i < numVecs; i++)
@@ -309,7 +315,9 @@ void runL2Norm(Tensor<float, 2, true>& input, Tensor<float, 1, true>& output, bo
     }
     cublasSetPointerMode(handle, CUBLAS_POINTER_MODE_HOST);
     // normSquard not used
-    thrust::for_each(thrust::device, output.end() - numVecs, output.end(), ReciprocalAndSquareRoot());
+//    cudaStreamSynchronize(stream);
+    thrust::for_each(thrust::cuda::par.on(stream), output.end() - numVecs, output.end(), ReciprocalAndSquareRoot());
+    cublasSetStream(handle, stream_id);
 }
 
 } } // namespace

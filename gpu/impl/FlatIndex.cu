@@ -183,7 +183,7 @@ FlatIndex::query(Tensor<float, 2, true>& input,
 //        if (use_int8_norms_)
         {
             DeviceTensor<float, 1, true> queryNorms({(int) input.getSize(0)});
-            runL2Norm(input, queryNorms, true, input.getSize(0), resources_);
+            runL2Norm(input, queryNorms, true, input.getSize(0), resources_, stream);
             queryNorms_ = std::move(queryNorms);
         }
 
@@ -410,7 +410,7 @@ FlatIndex::add(const float* data, int numVecs, cudaStream_t stream) {
                 DeviceTensor<float, 1, true> normsInt8({(int) num_count + MAX_ADD_BATCH});
                 if (normsInt8_.getSize(0) != 0)
                     CUDA_VERIFY(cudaMemcpy(normsInt8.data(), normsInt8_.data(), normsInt8_.getSize(0) * sizeof(float), cudaMemcpyDefault));
-                runL2Norm(devData, normsInt8, true, MAX_ADD_BATCH, resources_);
+                runL2Norm(devData, normsInt8, true, MAX_ADD_BATCH, resources_, stream);
                 normsInt8_ = std::move(normsInt8);
                 num_count += MAX_ADD_BATCH;
             }
@@ -439,7 +439,7 @@ FlatIndex::add(const float* data, int numVecs, cudaStream_t stream) {
                 DeviceTensor<float, 1, true> normsInt8({(int) num_count + left});
                 if (normsInt8_.getSize(0) != 0)
                     CUDA_VERIFY(cudaMemcpy(normsInt8.data(), normsInt8_.data(), normsInt8_.getSize(0) * sizeof(float), cudaMemcpyDefault));
-                runL2Norm(devData, normsInt8, true, left, resources_);
+                runL2Norm(devData, normsInt8, true, left, resources_, stream);
                 normsInt8_ = std::move(normsInt8);
             }
 
