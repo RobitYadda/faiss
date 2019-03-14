@@ -102,7 +102,7 @@ public:
         memcpy((T*)dst_block.data() + idx % block_size_, val, num);
     }
 
-    // adjust the group size to fit n and reserve the last block to block_size
+    // adjust the group size to fit n and reserve the last block to block_size_
     void resize(size_t n) {
         size_t block_count = n / block_size_;
         size_t left_count = n % block_size_;
@@ -116,9 +116,9 @@ public:
         size_ = n;
     }
 
-    // adjust the group capacity if necessary and reserve the last block to block_size
+    // adjust the group capacity if necessary and reserve the last block to block_size_
     void reserve(size_t n) {
-        size_t block_count = (n % block_size_ == 0) ? n / block_size_ : n / block_size_ + 1;
+        size_t block_count = (n + block_size_ - 1) / block_size_;
         data_.reserve(block_count);
         for (size_t i = 0; i < block_count; ++i) {
             data_[i].reserve(block_size_);

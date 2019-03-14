@@ -1095,7 +1095,14 @@ void FloatToInt8 (int8_t* out,
                   size_t num)
 {
     for (size_t i = 0; i < num; ++i) {
-        out[i] = (int8_t)roundf(in[i] * KINT8);
+        float f = in[i] * KINT8;
+        if (f >= -128.0f && f <= 127.0f) {
+            out[i] = (int8_t)roundf(f);
+        } else if (f < -128.0f) {
+            out[i] = -128;
+        } else {
+            out[i] = 127;
+        }
     }
 }
 
@@ -1132,7 +1139,14 @@ void FloatToUint8 (uint8_t* out,
                    size_t num)
 {
     for (size_t i = 0; i < num; ++i) {
-        out[i] = (uint8_t)roundf(in[i] * KINT8 + CUINT8);
+        float f = in[i] * KINT8;
+        if (f >= -128.0f && f <= 127.0f) {
+            out[i] = (uint8_t)roundf(f + CUINT8);
+        } else if (f < -128.0f) {
+            out[i] = 0;
+        } else {
+            out[i] = 255;
+        }
     }
 }
 

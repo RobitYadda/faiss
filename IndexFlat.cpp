@@ -29,7 +29,10 @@ IndexFlat::IndexFlat (idx_t d, MetricType metric, DataType data_type):
 
 void IndexFlat::add (idx_t n, const float *x) {
     if (data_type == DATA_IINT8) {
-        FloatToUint8(xb_int8, x, n * d);
+        uint8_t* x_ = new uint8_t[n * d];
+        FloatToUint8(x_, x, n * d);
+        xb_int8.append(x_, n * d);
+        delete [] x_;
     } else {
         xb.insert(xb.end(), x, x + n * d);
     }
@@ -133,13 +136,13 @@ void IndexFlat::reconstruct (idx_t key, float * recons) const
 
 long IndexFlat::remove_ids(const idx_t &idx) {
 
-    if(idx>=ntotal){
+    if(idx >= ntotal){
         return -1;
     }
 
-    if(ntotal!=1){
+    if(ntotal > 0){
         if (data_type == DATA_IINT8) {
-            xb_int8.replace(idx * d, &xb_int8[(ntotal-1) * d], sizeof(uint8_t) * d);
+            xb_int8.replace(idx * d, &xb_int8[(ntotal - 1) * d], sizeof(uint8_t) * d);
             ntotal -= 1;
             xb_int8.resize(ntotal * d);
         } else {
@@ -166,9 +169,10 @@ void IndexFlat::update(idx_t key, const float *recons) const {
         return;
     }
     if (data_type == DATA_IINT8) {
-        std::vector<uint8_t> recons_tmp(d);
-        FloatToUint8(recons_tmp.data(), recons, d);
-        xb_int8.replace(key * d, recons_tmp.data(), sizeof(uint8_t) * d);
+        uint8_t* recons_ = new uint8_t[d];
+        FloatToUint8(recons_, recons, d);
+        xb_int8.replace(key * d, recons_, sizeof(uint8_t) * d);
+        delete [] recons_;
     } else {
         memcpy((float*)(&xb[d * key]),(float*)recons,sizeof(float)*d);
     }
