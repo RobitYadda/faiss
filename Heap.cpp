@@ -64,6 +64,32 @@ void HeapArray<C>::addn (size_t nj, const T *vin, TI j0,
 }
 
 template <typename C>
+void HeapArray<C>::addm (size_t nj, const T *vin, TI j0,
+                         size_t i0, long ni)
+{
+    if (ni == -1) ni = nh;
+    assert (i0 >= 0 && i0 + ni <= nh);
+
+    for (size_t i = i0; i < i0 + ni; i++) {
+        T * __restrict simi = get_val(i);
+        TI * __restrict idxi = get_ids (i);
+        const T *ip_line = vin + (i - i0) * nj;
+
+        for (size_t j = 0; j < nj; j++) {
+            T ip = ip_line [j];
+            if (C::cmp(simi[0], ip)) {
+                heap_mutex_vec[i].get()->lock();
+                if (C::cmp(simi[0], ip)) {
+                    heap_pop<C>(k, simi, idxi);
+                    heap_push<C>(k, simi, idxi, ip, j + j0);
+                }
+                heap_mutex_vec[i].get()->unlock();
+            }
+        }
+    }
+}
+
+template <typename C>
 void HeapArray<C>::addn_col (size_t nj, const T *vin, TI j0,
                              size_t i0, long ni)
 {

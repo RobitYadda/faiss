@@ -926,39 +926,31 @@ static void knn_inner_product_blas (
         size_t d, size_t nx, size_t ny,
         float_minheap_array_t * res)
 {
-    res->heapify ();
+    res->heapify();
 
-    // BLAS does not like empty matrices
-    if (nx == 0 || ny == 0) return;
-
-    /* block sizes */
-    const size_t bs_x = 4096, bs_y = 1024;
-    // const size_t bs_x = 16, bs_y = 16;
-    float *ip_block = new float[bs_x * bs_y];
+    tbb::task_group group;
+    const size_t bs_x = 32, bs_y = 1024;
 
     for (size_t i0 = 0; i0 < nx; i0 += bs_x) {
-        size_t i1 = i0 + bs_x;
-        if(i1 > nx) i1 = nx;
+        size_t i1 = (i0 + bs_x > nx) ? (nx - i0) : bs_x;
+        size_t ox = i0 * d;
 
         for (size_t j0 = 0; j0 < ny; j0 += bs_y) {
-            size_t j1 = j0 + bs_y;
-            if (j1 > ny) j1 = ny;
-            /* compute the actual dot products */
-            {
-                float one = 1, zero = 0;
-                FINTEGER nyi = j1 - j0, nxi = i1 - i0, di = d;
-                sgemm_ ("Transpose", "Not transpose", &nyi, &nxi, &di, &one,
-                        y + j0 * d, &di,
-                        x + i0 * d, &di, &zero,
-                        ip_block, &nyi);
-            }
+            size_t j1 = (j0 + bs_y > ny) ? (ny - j0) : bs_y;
 
-            /* collect maxima */
-            res->addn (j1 - j0, ip_block, j0, i0, i1 - i0);
+            group.run([x, y, d, i0, i1, j0, j1, ox, res](){
+                float* ip_block = new float[i1 * j1];
+                MKL_INT m = i1, n = j1, k = d;
+                MKL_INT lda = k, ldb = k, ldc = n;
+                float alpha = 1, beta = 0;
+                cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasTrans, m, n, k, alpha, x + ox, lda, y + j0 * d, ldb, beta, ip_block, ldc);
+                res->addm(j1, ip_block, j0, i0, i1);
+                delete [] ip_block;
+            });
         }
     }
-    delete [] ip_block;
-    res->reorder ();
+    group.wait();
+    res->reorder();
 }
 
 void knn_inner_product_int8(const int8_t* x, const GroupVector<uint8_t>& yb, size_t d, size_t nx, int_minheap_array_t* res) {
@@ -1219,11 +1211,11 @@ void    knn_inner_product (const float * x,
         size_t d, size_t nx, size_t ny,
         float_minheap_array_t * res)
 {
-    if (d % 4 == 0 && nx < distance_compute_blas_threshold) {
-        knn_inner_product_sse (x, y, d, nx, ny, res);
-    } else {
+//    if (d % 4 == 0 && nx < distance_compute_blas_threshold) {
+//        knn_inner_product_sse (x, y, d, nx, ny, res);
+//    } else {
         knn_inner_product_blas (x, y, d, nx, ny, res);
-    }
+//    }
 }
 
 void knn_inner_product (const float * x,
